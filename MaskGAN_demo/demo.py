@@ -54,7 +54,7 @@ class Ex(QWidget, Ui_Form):
         self.graphicsView_2.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.graphicsView_2.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.graphicsView_2.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
- 
+
         self.result_scene = QGraphicsScene()
         self.graphicsView_3.setScene(self.result_scene)
         self.graphicsView_3.setAlignment(Qt.AlignTop | Qt.AlignLeft)
@@ -76,7 +76,7 @@ class Ex(QWidget, Ui_Form):
                         "Cannot load %s." % fileName)
                 return
             image = image.scaled(self.graphicsView.size(), Qt.IgnoreAspectRatio)
-        
+
             if len(self.ref_scene.items())>0:
                 self.ref_scene.removeItem(self.ref_scene.items()[-1])
             self.ref_scene.addPixmap(image)
@@ -87,29 +87,29 @@ class Ex(QWidget, Ui_Form):
     def open_mask(self):
         fileName, _ = QFileDialog.getOpenFileName(self, "Open File",
                 QDir.currentPath())
-        if fileName:    
+        if fileName:
             mat_img = cv2.imread(fileName)
             self.mask = mat_img.copy()
-            self.mask_m = mat_img       
+            self.mask_m = mat_img
             mat_img = mat_img.copy()
             image = QImage(mat_img, 512, 512, QImage.Format_RGB888)
 
             if image.isNull():
                 QMessageBox.information(self, "Image Viewer",
                         "Cannot load %s." % fileName)
-                return    
+                return
 
             for i in range(512):
                 for j in range(512):
                     r, g, b, a = image.pixelColor(i, j).getRgb()
-                    image.setPixel(i, j, color_list[r].rgb()) 
-           
+                    image.setPixel(i, j, color_list[r].rgb())
+
             pixmap = QPixmap()
-            pixmap.convertFromImage(image)  
+            pixmap.convertFromImage(image)
             self.image = pixmap.scaled(self.graphicsView.size(), Qt.IgnoreAspectRatio)
             self.scene.reset()
             if len(self.scene.items())>0:
-                self.scene.reset_items() 
+                self.scene.reset_items()
             self.scene.addPixmap(self.image)
 
     def bg_mode(self):
@@ -172,10 +172,10 @@ class Ex(QWidget, Ui_Form):
     def increase(self):
         if self.scene.size < 15:
             self.scene.size += 1
-    
+
     def decrease(self):
         if self.scene.size > 1:
-            self.scene.size -= 1 
+            self.scene.size -= 1
 
     def edit(self):
         for i in range(19):
@@ -188,26 +188,26 @@ class Ex(QWidget, Ui_Form):
         mask = self.mask.copy()
         mask_m = self.mask_m.copy()
 
-        mask = transform_mask(Image.fromarray(np.uint8(mask))) 
+        mask = transform_mask(Image.fromarray(np.uint8(mask)))
         mask_m = transform_mask(Image.fromarray(np.uint8(mask_m)))
         img = transform_image(self.img)
-    
+
         start_t = time.time()
-        generated = model.inference(torch.FloatTensor([mask_m.numpy()]), torch.FloatTensor([mask.numpy()]), torch.FloatTensor([img.numpy()]))   
+        generated = model.inference(torch.FloatTensor([mask_m.numpy()]), torch.FloatTensor([mask.numpy()]), torch.FloatTensor([img.numpy()]))
         end_t = time.time()
         print('inference time : {}'.format(end_t-start_t))
         #save_image((generated.data[0] + 1) / 2,'./results/1.jpg')
         result = generated.permute(0, 2, 3, 1)
-        result = result.cpu().numpy()
+        result = result.cpu().detach().numpy()
         result = (result + 1) * 127.5
         result = np.asarray(result[0,:,:,:], dtype=np.uint8)
-        qim = QImage(result.data, result.shape[1], result.shape[0], result.strides[0], QImage.Format_RGB888)
-
+        result = np.require(result, np.uint8, 'C')
+        qim = QImage(result, result.shape[1], result.shape[0], result.strides[0], QImage.Format_RGB888)
         #for i in range(512):
         #    for j in range(512):
         #       r, g, b, a = image.pixelColor(i, j).getRgb()
-        #       image.setPixel(i, j, color_list[r].rgb()) 
-        if len(self.result_scene.items())>0: 
+        #       image.setPixel(i, j, color_list[r].rgb())
+        if len(self.result_scene.items())>0:
             self.result_scene.removeItem(self.result_scene.items()[-1])
             self.result_scene.addPixmap(QPixmap.fromImage(qim))
 
@@ -228,7 +228,7 @@ class Ex(QWidget, Ui_Form):
 
     def clear(self):
         self.mask_m = self.mask.copy()
-    
+
         self.scene.reset_items()
         self.scene.reset()
         if type(self.image):
@@ -242,7 +242,7 @@ if __name__ == '__main__':
     opt.batchSize = 1  # test code only supports batchSize = 1
     opt.serial_batches = True  # no shuffle
     opt.no_flip = True  # no flip
-    model = create_model(opt)   
+    model = create_model(opt)
     app = QApplication(sys.argv)
     ex = Ex(model, opt)
     sys.exit(app.exec_())
