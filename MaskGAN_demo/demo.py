@@ -191,6 +191,7 @@ class Ex(QWidget, Ui_Form):
         mask = transform_mask(Image.fromarray(np.uint8(mask)))
         mask_m = transform_mask(Image.fromarray(np.uint8(mask_m)))
         img = transform_image(self.img)
+        print(img.numpy())
 
         start_t = time.time()
         generated = model.inference(torch.FloatTensor([mask_m.numpy()]), torch.FloatTensor([mask.numpy()]), torch.FloatTensor([img.numpy()]))
