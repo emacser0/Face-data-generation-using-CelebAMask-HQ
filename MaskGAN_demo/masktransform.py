@@ -44,8 +44,11 @@ result_mask_directory = "AdversarialSample/mask/"
 image_extension = ".jpg"
 mask_extension = ".png"
 
-movetransform_ranges = [[-100, -50], [50, 100]]
-movetransform_targets = [NOSE, LEFTEYE, RIGHTEYE, UPPERLIP]
+move_ranges = [(-100, -50), (50, 100)]
+move_features = [NOSE, LEFTEYE, RIGHTEYE, UPPERLIP, LEFTBROW, RIGHTBROW]
+
+scale_ranges = [(0.2, 0.5), (1.5, 2.0)]
+scale_features = [NOSE, LEFTEYE, RIGHTEYE, UPPERLIP, LEFTBROW, RIGHTBROW]
 
 def get_bounding_box(mask):
     boxes = [((mask.shape[1], mask.shape[0]), (0, 0)) for _ in range(19)]
@@ -69,7 +72,7 @@ def draw_bounding_box(mask, image, normalize=False):
             cv2.rectangle(image, box[0], box[1], (0, index, 0), 2)
     return image
 
-def translate_mask(mask, index, dx, dy, fill=0):
+def move_mask(mask, index, dx, dy, fill=0):
     result = mask.copy()
     for i in range(mask.shape[1]):
         for j in range(mask.shape[0]):
@@ -82,10 +85,27 @@ def generate_adversarial_sample(model, image_path, mask_path):
     mask = cv2.imread(mask_path)
     image = Image.open(image_path)
 
-    mask_m = translate_mask(mask, LEFTEYE, 0, 100, fill=SKIN)
-    mask_m = translate_mask(mask_m, RIGHTEYE, 0, -100, fill=SKIN)
-    mask_m = translate_mask(mask_m, UPPERLIP, 0, -20, fill=SKIN)
-    mask_m = translate_mask(mask_m, LOWERLIP, 0, -20, fill=SKIN)
+    mask_m = mask.copy()
+    move_feature_count = min(len(move_features) - 1, round(abs(np.random.normal(0, 1))) + 1)
+    print(move_feature_count)
+    feature_indexes = np.random.choice(range(len(move_features)), move_feature_count)
+    for feature_index in feature_indexes:
+        feature_index = np.random.randint(0, len(move_features))
+
+        x_range_index = np.random.randint(0, len(move_ranges))
+        y_range_index = np.random.randint(0, len(move_ranges))
+
+        x_lower_bound, x_upper_bound = move_ranges[x_range_index]
+        y_lower_bound, y_upper_bound = move_ranges[y_range_index]
+
+        offset_x = np.random.randint(x_lower_bound, x_upper_bound + 1)
+        offset_y = np.random.randint(y_lower_bound, y_upper_bound + 1)
+
+        mask_m = move_mask(mask_m, move_features[feature_index], offset_x, offset_y, fill=SKIN)
+        if move_features[feature_index] == UPPERLIP:
+            mask_m = move_mask(mask_m, LOWERLIP, offset_x, offset_y, fill=SKIN)
+            mask_m = move_mask(mask_m, MOUTH, offset_x, offset_y, fill=SKIN)
+
     transform_mask = get_transform(opt, params, method=Image.NEAREST, normalize=False, normalize_mask=True)
     transform_image = get_transform(opt, params)
 
@@ -116,10 +136,17 @@ if __name__ == "__main__":
     params = get_params(opt, (1024, 1024))
 
     sample_count = 30000
-    iteration_count = 10000
+    iteration_count = 1000
+
+    os.makedirs(result_image_directory, exist_ok=True)
+    os.makedirs(result_mask_directory, exist_ok=True)
 
     for i in range(iteration_count):
         sample_index = np.random.randint(0, sample_count)
         image_path = image_directory + str(sample_index) + image_extension
         mask_path = mask_directory + str(sample_index) + mask_extension
+
         result_image, result_mask = generate_adversarial_sample(model, image_path, mask_path)
+
+        cv2.imwrite(result_image_directory + str(i) + image_extension, result_image)
+        cv2.imwrite(result_mask_directory + str(i) + mask_extension, result_mask)

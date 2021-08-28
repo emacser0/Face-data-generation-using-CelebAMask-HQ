@@ -5,8 +5,8 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 
 def make_folder(path, version):
-        if not os.path.exists(os.path.join(path, version)):
-            os.makedirs(os.path.join(path, version))
+    if not os.path.exists(os.path.join(path, version)):
+        os.makedirs(os.path.join(path, version))
 
 def tensor2var(x, grad=False):
     if torch.cuda.is_available():
@@ -32,9 +32,9 @@ def labelcolormap(N):
         cmap = np.array([(0,  0,  0), (204, 0,  0), (76, 153, 0),
                      (204, 204, 0), (51, 51, 255), (204, 0, 204), (0, 255, 255),
                      (51, 255, 255), (102, 51, 0), (255, 0, 0), (102, 204, 0),
-                     (255, 255, 0), (0, 0, 153), (0, 0, 204), (255, 51, 153), 
-                     (0, 204, 204), (0, 51, 0), (255, 153, 51), (0, 204, 0)], 
-                     dtype=np.uint8) 
+                     (255, 255, 0), (0, 0, 153), (0, 0, 204), (255, 51, 153),
+                     (0, 204, 204), (0, 51, 0), (255, 153, 51), (0, 204, 0)],
+                     dtype=np.uint8)
     else:
         cmap = np.zeros((N, 3), dtype=np.uint8)
         for i in range(N):
@@ -90,14 +90,14 @@ def generate_label(inputs, imsize):
 
     pred_batch = np.array(pred_batch)
     pred_batch = torch.from_numpy(pred_batch)
-            
+
     label_batch = []
     for p in pred_batch:
         p = p.view(1, imsize, imsize)
         label_batch.append(tensor2label(p, 19))
-                
+
     label_batch = np.array(label_batch)
-    label_batch = torch.from_numpy(label_batch)	
+    label_batch = torch.from_numpy(label_batch)
 
     return label_batch
 
@@ -111,11 +111,11 @@ def generate_label_plain(inputs, imsize):
 
     pred_batch = np.array(pred_batch)
     pred_batch = torch.from_numpy(pred_batch)
-            
+
     label_batch = []
     for p in pred_batch:
         label_batch.append(p.numpy())
-                
+
     label_batch = np.array(label_batch)
 
     return label_batch

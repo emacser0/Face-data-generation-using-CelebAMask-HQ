@@ -20,7 +20,10 @@ def main(config):
                              config.batch_size, config.train)
         trainer = Trainer(data_loader.loader(), config)
         trainer.train()
-    else:
+    elif config.test:
+        tester = Tester(config)
+        tester.test()
+    elif config.apply:
         tester = Tester(config)
         tester.test()
 

@@ -22,26 +22,31 @@ def get_parameters():
     parser.add_argument('--beta2', type=float, default=0.999)
 
     # Testing setting
-    parser.add_argument('--test_size', type=int, default=2824) 
-    parser.add_argument('--model_name', type=str, default='model.pth') 
+    parser.add_argument('--test_size', type=int, default=2824)
+    parser.add_argument('--model_name', type=str, default='model.pth')
+
+    # Applying setting
+    parser.add_argument('--apply_size', type=int, default=10000)
 
     # using pretrained
     parser.add_argument('--pretrained_model', type=int, default=None)
 
     # Misc
-    parser.add_argument('--train', type=str2bool, default=True)
+    parser.add_argument('--train', type=str2bool, default=False)
+    parser.add_argument('--test', type=str2bool, default=False)
+    parser.add_argument('--apply', type=str2bool, default=False)
     parser.add_argument('--parallel', type=str2bool, default=False)
     parser.add_argument('--use_tensorboard', type=str2bool, default=False)
 
     # Path
     parser.add_argument('--img_path', type=str, default='./Data_preprocessing/train_img')
-    parser.add_argument('--label_path', type=str, default='./Data_preprocessing/train_label') 
+    parser.add_argument('--label_path', type=str, default='./Data_preprocessing/train_label')
     parser.add_argument('--log_path', type=str, default='./logs')
     parser.add_argument('--model_save_path', type=str, default='./models')
     parser.add_argument('--sample_path', type=str, default='./samples')
-    parser.add_argument('--test_image_path', type=str, default='./Data_preprocessing/test_img') 
-    parser.add_argument('--test_label_path', type=str, default='./test_results') 
-    parser.add_argument('--test_color_label_path', type=str, default='./test_color_visualize') 
+    parser.add_argument('--test_image_path', type=str, default='./Data_preprocessing/test_img')
+    parser.add_argument('--test_label_path', type=str, default='./test_results')
+    parser.add_argument('--test_color_label_path', type=str, default='./test_color_visualize')
 
     # Step size
     parser.add_argument('--log_step', type=int, default=10)
