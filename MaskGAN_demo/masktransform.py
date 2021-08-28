@@ -35,13 +35,19 @@ NECKLACE = 16
 NECK = 17
 CLOTH = 18
 
-mask_path = "../face_parsing/test_results/0.png"
-image_path = "../face_parsing/Data_preprocessing/test_img/0.jpg"
+image_directory = "../face_parsing/Data_preprocessing/test_img/"
+mask_directory = "../face_parsing/test_results/"
 
-mask = cv2.imread(mask_path)
-image = Image.open(image_path)
+result_image_directory = "AdversarialSample/image/"
+result_mask_directory = "AdversarialSample/mask/"
 
-def get_bounding_box_from_mask(mask):
+image_extension = ".jpg"
+mask_extension = ".png"
+
+movetransform_ranges = [[-100, -50], [50, 100]]
+movetransform_targets = [NOSE, LEFTEYE, RIGHTEYE, UPPERLIP]
+
+def get_bounding_box(mask):
     boxes = [((mask.shape[1], mask.shape[0]), (0, 0)) for _ in range(19)]
     for i in range(mask.shape[1]):
         for j in range(mask.shape[0]):
@@ -52,7 +58,7 @@ def get_bounding_box_from_mask(mask):
     return boxes
 
 def draw_bounding_box(mask, image, normalize=False):
-    boxes = get_bounding_box_from_mask(mask)
+    boxes = get_bounding_box(mask)
 
     for index, box in enumerate(boxes):
         if index < 2:
@@ -72,43 +78,46 @@ def translate_mask(mask, index, dx, dy, fill=0):
                 result[i, j] = fill
     return result
 
-mask_m = translate_mask(mask, LEFTEYE, 0, 100, fill=SKIN)
-mask_m = translate_mask(mask_m, RIGHTEYE, 0, -100, fill=SKIN)
-mask_m = translate_mask(mask_m, UPPERLIP, 0, -20, fill=SKIN)
-mask_m = translate_mask(mask_m, LOWERLIP, 0, -20, fill=SKIN)
-'''
-mask_m = (mask_m / mask_m.max()) * 255
-mask_m = np.array(mask_m, dtype=np.uint8)
-mask_m = cv2.applyColorMap(mask_m, cv2.COLORMAP_TWILIGHT)
-'''
+def generate_adversarial_sample(model, image_path, mask_path):
+    mask = cv2.imread(mask_path)
+    image = Image.open(image_path)
 
-os.environ["CUDA_VISIBLE_DEVICES"] = str(0)
-opt = TestOptions().parse(save=False)
-opt.nThreads = 1   # test code only supports nThreads = 1
-opt.batchSize = 1  # test code only supports batchSize = 1
-opt.serial_batches = True  # no shuffle
-opt.no_flip = True  # no flip
-model = create_model(opt)
+    mask_m = translate_mask(mask, LEFTEYE, 0, 100, fill=SKIN)
+    mask_m = translate_mask(mask_m, RIGHTEYE, 0, -100, fill=SKIN)
+    mask_m = translate_mask(mask_m, UPPERLIP, 0, -20, fill=SKIN)
+    mask_m = translate_mask(mask_m, LOWERLIP, 0, -20, fill=SKIN)
+    transform_mask = get_transform(opt, params, method=Image.NEAREST, normalize=False, normalize_mask=True)
+    transform_image = get_transform(opt, params)
 
-params = get_params(opt, (1024, 1024))
+    mask_t = transform_mask(Image.fromarray(np.uint8(mask)))
+    mask_m_t = transform_mask(Image.fromarray(np.uint8(mask_m)))
+    image_t = transform_image(Image.fromarray(np.uint8(image)))
 
-transform_mask = get_transform(opt, params, method=Image.NEAREST, normalize=False, normalize_mask=True)
-transform_image = get_transform(opt, params)
+    generated = model.inference(torch.FloatTensor([mask_m_t.numpy()]), torch.FloatTensor([mask_t.numpy()]), torch.FloatTensor([image_t.numpy()]))
 
-mask_t = transform_mask(Image.fromarray(np.uint8(mask)))
-mask_m_t = transform_mask(Image.fromarray(np.uint8(mask_m)))
-image_t = transform_image(Image.fromarray(np.uint8(image)))
+    result = generated.permute(0, 2, 3, 1)
+    result = result.cpu().detach().numpy()
+    result = (result + 1) * 127.5
+    result = np.asarray(result[0,:,:,:], dtype=np.uint8)
+    result = cv2.cvtColor(result, cv2.COLOR_RGB2BGR)
 
-generated = model.inference(torch.FloatTensor([mask_m_t.numpy()]), torch.FloatTensor([mask_t.numpy()]), torch.FloatTensor([image_t.numpy()]))
+    #result = draw_bounding_box(mask_m, result, normalize=True)
+    return (result, mask_m)
 
-result = generated.permute(0, 2, 3, 1)
-result = result.cpu().detach().numpy()
-result = (result + 1) * 127.5
-result = np.asarray(result[0,:,:,:], dtype=np.uint8)
-result = cv2.cvtColor(result, cv2.COLOR_RGB2BGR)
+if __name__ == "__main__":
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(0)
+    opt = TestOptions().parse(save=False)
+    opt.nThreads = 1   # test code only supports nThreads = 1
+    opt.batchSize = 1  # test code only supports batchSize = 1
+    opt.serial_batches = True  # no shuffle
+    opt.no_flip = True  # no flip
+    model = create_model(opt)
 
-result = draw_bounding_box(mask_m, result, normalize=True)
+    params = get_params(opt, (1024, 1024))
 
-cv2.imshow('result', result)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+    image_count = 30000
+
+    for i in range(image_count):
+        image_path = image_directory + str(image_count) + image_extension
+        mask_path = mask_directory + str(image_count) + mask_extension
+        result_image, result_mask = generate_adversarial_sample(model, image_path, mask_path)
