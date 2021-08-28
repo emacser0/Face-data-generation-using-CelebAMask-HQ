@@ -77,6 +77,8 @@ def move_mask(mask, index, dx, dy, fill=0):
     for i in range(mask.shape[1]):
         for j in range(mask.shape[0]):
             if mask[i, j, 0] == index:
+                if i + dy >= mask.shape[0] or j + dx >= mask.shape[1]:
+                    continue
                 result[i + dy, j + dx] = mask[i, j]
                 result[i, j] = fill
     return result
