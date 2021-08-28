@@ -115,9 +115,11 @@ if __name__ == "__main__":
 
     params = get_params(opt, (1024, 1024))
 
-    image_count = 30000
+    sample_count = 30000
+    iteration_count = 10000
 
-    for i in range(image_count):
-        image_path = image_directory + str(image_count) + image_extension
-        mask_path = mask_directory + str(image_count) + mask_extension
+    for i in range(iteration_count):
+        sample_index = np.random.randint(0, sample_count)
+        image_path = image_directory + str(sample_index) + image_extension
+        mask_path = mask_directory + str(sample_index) + mask_extension
         result_image, result_mask = generate_adversarial_sample(model, image_path, mask_path)
